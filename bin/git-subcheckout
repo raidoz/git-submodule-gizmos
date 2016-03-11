@@ -1,0 +1,45 @@
+#!/bin/bash
+
+if [[ $# -eq 1 ]]; then
+        echo "$0 $@"
+else
+        echo "Specify submodule!"
+        exit 1
+fi
+
+SUB=${1%/}
+
+BRANCH=$(git config -f .gitmodules submodule.$SUB.branch)
+
+if [ -z "$BRANCH" ]; then
+    echo "Upstream branch not known, cannot track"
+    exit 1
+else
+    echo "Tracked branch is $BRANCH"
+fi
+
+# Force the submodule to the commited state
+
+cd $SUB
+#if git diff --quiet HEAD; then
+if [[ -z $(git status -s) ]]; then
+	cd -
+	if git submodule update --force $SUB; then
+	    cd $SUB
+
+	    # delete branch in case it exists
+	    git branch -D $BRANCH
+	    # create the branch from the SHA1 that was checked out
+	    git branch $BRANCH
+	    # checkout the branch
+	    git checkout $BRANCH
+	    # set it to track the branch with the same name from origin
+	    git branch --set-upstream-to origin/$BRANCH
+	else
+	    echo "submodule $SUB update failed"
+	    exit 1
+	fi
+else
+	echo "Submodule $SUB has uncommited changes, not updating!"
+	exit 1
+fi
