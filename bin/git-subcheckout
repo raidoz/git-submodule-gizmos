@@ -1,45 +1,59 @@
 #!/bin/bash
 
+# echo "$0 $@"
 if [[ $# -eq 1 ]]; then
-        echo "$0 $@"
+		SUBMODULES=${1%/} # remove trailing slash
+		echo "Will checkout submodule ${SUBMODULES[@]}"
 else
-        echo "Specify submodule!"
-        exit 1
+		SUBMODULES=($(grep path .gitmodules | sed 's/.*= //')) # array creation
+		echo "Will checkout ${#SUBMODULES[@]} submodule(s): ${SUBMODULES[@]}"
 fi
 
-SUB=${1%/}
-
-BRANCH=$(git config -f .gitmodules submodule.$SUB.branch)
-
-if [ -z "$BRANCH" ]; then
-    echo "Upstream branch not known, cannot track"
-    exit 1
-else
-    echo "Tracked branch is $BRANCH"
-fi
-
-# Force the submodule to the commited state
-
-cd $SUB
-#if git diff --quiet HEAD; then
-if [[ -z $(git status -s) ]]; then
-	cd -
-	if git submodule update --force $SUB; then
-	    cd $SUB
-
-	    # delete branch in case it exists
-	    git branch -D $BRANCH
-	    # create the branch from the SHA1 that was checked out
-	    git branch $BRANCH
-	    # checkout the branch
-	    git checkout $BRANCH
-	    # set it to track the branch with the same name from origin
-	    git branch --set-upstream-to origin/$BRANCH
-	else
-	    echo "submodule $SUB update failed"
-	    exit 1
-	fi
-else
-	echo "Submodule $SUB has uncommited changes, not updating!"
+echo -e -n "\e[92m" # Make the question green
+read -p "Proceed(y/N)? " -n 1 -r
+echo -e "\e[0m" # reset color and move to new line
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 	exit 1
 fi
+
+for SUB in ${SUBMODULES[@]}; do
+	echo -e "\e[34m$SUB\e[0m"
+
+	BRANCH=$(git config -f .gitmodules submodule.$SUB.branch)
+
+	if [ -z "$BRANCH" ]; then
+		echo "$SUB: \e[33mTracked branch not known, skipping!\e[0m"
+		continue
+	fi
+
+	# Force the submodule to the commited state, branch and sha
+
+	cd $SUB
+
+	echo -e -n "$SUB: "
+	if [[ -z $(git status -s) ]]; then
+		cd - > /dev/null
+		if git submodule update --force $SUB; then
+			cd $SUB
+
+			# delete branch in case it exists
+			git branch -D $BRANCH --quiet
+			# create the branch from the SHA1 that was checked out
+			git branch $BRANCH --quiet
+			# checkout the branch
+			git checkout $BRANCH --quiet
+			# set it to track the branch with the same name from origin
+			git branch --set-upstream-to origin/$BRANCH --quiet
+
+			echo -e "$SUB: Tracked branch is $BRANCH"
+		else
+			echo -e "$SUB: \e[31mupdate failed, aborting!\e[0m"
+			exit 1
+		fi
+	else
+		echo -e "$SUB: \e[31muncommited changes, aborting!\e[0m"
+		exit 1
+	fi
+
+	cd - > /dev/null
+done
