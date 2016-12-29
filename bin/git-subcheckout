@@ -10,7 +10,7 @@ else
 fi
 
 echo -e -n "\e[92m" # Make the question green
-read -p "Proceed(y/N)? " -n 1 -r
+read -p "Proceed? (y/N) " -n 1 -r
 echo -e "\e[0m" # reset color and move to new line
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 	exit 1
@@ -22,8 +22,16 @@ for SUB in ${SUBMODULES[@]}; do
 	BRANCH=$(git config -f .gitmodules submodule.$SUB.branch)
 
 	if [ -z "$BRANCH" ]; then
-		echo "$SUB: \e[33mTracked branch not known, skipping!\e[0m"
-		continue
+		echo -e -n "\e[92m" # Make the question green
+		read -p "$SUB: Tracked branch not known, try master? (y/N) " -n 1 -r
+		echo -e "\e[0m" # reset color and move to new line
+
+		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+			echo -e "$SUB: \e[33mTracked branch not known, skipping!\e[0m"
+			continue
+		else
+			BRANCH="master"
+		fi
 	fi
 
 	# Force the submodule to the commited state, branch and sha
