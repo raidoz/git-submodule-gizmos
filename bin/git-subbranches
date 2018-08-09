@@ -1,0 +1,24 @@
+#!/bin/bash
+
+SUBMODULES=($(grep path .gitmodules | sed 's/.*= //')) # array creation
+
+for SUB in ${SUBMODULES[@]}; do
+	# echo -e "\e[34m$SUB\e[0m"
+
+	BRANCH=$(git config -f .gitmodules submodule.$SUB.branch)
+
+	if [ -z "$BRANCH" ]; then
+		BRANCH="UNKNOWN"
+	fi
+
+	cd $SUB
+	CURRENT=$(git branch | grep \* | cut -d ' ' -f2)
+	cd - > /dev/null
+
+	if [ "$CURRENT" = "$BRANCH" ]; then
+		echo -e -n "\e[34m$SUB\e[0m $BRANCH $CURRENT\n"
+	else
+		echo -e -n "\e[34m$SUB\e[0m \e[33m$BRANCH $CURRENT\e[0m\n"
+	fi
+
+done
