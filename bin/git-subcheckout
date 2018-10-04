@@ -59,8 +59,14 @@ for SUB in ${SUBMODULES[@]}; do
 			exit 1
 		fi
 	else
-		echo -e "$SUB: \e[31muncommited changes, aborting!\e[0m"
-		exit 1
+		echo -e "$SUB: \e[31muncommited changes!\e[0m"
+		echo -e -n "\e[92m" # Make the question green
+		read -p "Skip? (y/N) " -n 1 -r
+		echo -e "\e[0m" # reset color and move to new line
+		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+			echo -e "$SUB: \e[31mAborted...\e[0m"
+			exit 1
+		fi
 	fi
 
 	cd - > /dev/null
